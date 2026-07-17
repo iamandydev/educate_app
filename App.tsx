@@ -1,93 +1,156 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { StatusBar } from 'react-native';
-import {
-  SafeAreaProvider,
-} from 'react-native-safe-area-context';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import LoadingScreen from './src/screens/LoadingScreen';
+import LoginScreen from './src/screens/LoginScreen';
 import PerfilScreen from './src/screens/PerfilScreen';
-import AnadirPerfilScreen from './src/screens/AnadirPerfilScreen';
-import AsignacionScreen from './src/screens/AsignacionScreen';
 import AjustesScreen from './src/screens/AjustesScreen';
+import HomeScreen from './src/screens/HomeScreen';
+import NivelesScreen from './src/screens/NivelesScreen';
+import QuizScreen from './src/screens/QuizScreen';
+import { loadProfiles, saveProfiles } from './src/storage/storageService';
+import { onConnectivityChange } from './src/services/connectivity';
+import { syncPendingAnswers } from './src/services/syncQueue';
+import type { ProfileData, Leccion, Nivel } from './src/types';
 
-type Screen = 'loading' | 'perfil' | 'anadirPerfil' | 'asignacion' | 'ajustes';
-
-const BUBBLE_COLORS = [
-  '#bc4749',
-  '#386641',
-  '#6a994e',
-  '#a7c957',
-  '#E76F51',
-  '#264653',
-  '#2A9D8F',
-  '#E9C46A',
-  '#F4A261',
-  '#8338EC',
-];
-
-function getRandomColor(): string {
-  return BUBBLE_COLORS[Math.floor(Math.random() * BUBBLE_COLORS.length)];
-}
+type Screen = 'loading' | 'login' | 'perfil' | 'ajustes' | 'home' | 'niveles' | 'quiz';
 
 function App() {
   const [currentScreen, setCurrentScreen] = useState<Screen>('loading');
-  const [profileName, setProfileName] = useState<string | null>(null);
-  const [profileColor, setProfileColor] = useState<string>(getRandomColor());
+  const [profiles, setProfiles] = useState<ProfileData[]>([]);
+  const [selectedProfile, setSelectedProfile] = useState<ProfileData | null>(null);
+  const [selectedLesson, setSelectedLesson] = useState<Leccion | null>(null);
+  const [selectedNivel, setSelectedNivel] = useState<Nivel | null>(null);
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setCurrentScreen('asignacion');
+    const timer = setTimeout(async () => {
+      const loaded = await loadProfiles();
+      setProfiles(loaded);
+      setCurrentScreen(loaded.length > 0 ? 'perfil' : 'login');
     }, 2000);
     return () => clearTimeout(timer);
   }, []);
 
-  const handleAddProfile = useCallback(() => {
-    setCurrentScreen('anadirPerfil');
+  useEffect(() => {
+    const unsubscribe = onConnectivityChange((connected) => {
+      if (connected) {
+        syncPendingAnswers();
+      }
+    });
+    syncPendingAnswers();
+    return unsubscribe;
   }, []);
 
-  const handleEnterProfile = useCallback(() => {
-    setCurrentScreen('asignacion');
+  const handleLoginSuccess = useCallback((profile: ProfileData) => {
+    setProfiles((prev) => {
+      if (prev.some((p) => p.codigo === profile.codigo)) { return prev; }
+      const updated = [...prev, profile];
+      saveProfiles(updated);
+      return updated;
+    });
+    setCurrentScreen('perfil');
+  }, []);
+
+  const handleSelectProfile = useCallback((profile: ProfileData) => {
+    setSelectedProfile(profile);
+    setCurrentScreen('home');
+  }, []);
+
+  const handleAddProfile = useCallback(() => {
+    setCurrentScreen('login');
   }, []);
 
   const handleSettings = useCallback(() => {
     setCurrentScreen('ajustes');
   }, []);
 
-  const handleNextFromAddProfile = useCallback((name: string, color: string) => {
-    setProfileName(name);
-    setProfileColor(color);
-    setCurrentScreen('perfil');
+  const handleProfilesChanged = useCallback((updated: ProfileData[]) => {
+    setProfiles(updated);
+    saveProfiles(updated);
   }, []);
 
-  const handleNextFromAsignacion = useCallback(() => {
-    setCurrentScreen('perfil');
+  const handleAllProfilesRemoved = useCallback(() => {
+    setProfiles([]);
+    setCurrentScreen('login');
   }, []);
 
   const handleBackFromAjustes = useCallback(() => {
     setCurrentScreen('perfil');
   }, []);
 
+  const handleBackFromHome = useCallback(() => {
+    setSelectedProfile(null);
+    setCurrentScreen('perfil');
+  }, []);
+
+  const handleSelectLesson = useCallback((leccion: Leccion) => {
+    setSelectedLesson(leccion);
+    setCurrentScreen('niveles');
+  }, []);
+
+  const handleBackFromNiveles = useCallback(() => {
+    setSelectedLesson(null);
+    setCurrentScreen('home');
+  }, []);
+
+  const handleSelectNivel = useCallback((nivel: Nivel) => {
+    setSelectedNivel(nivel);
+    setCurrentScreen('quiz');
+  }, []);
+
+  const handleBackFromQuiz = useCallback(() => {
+    setSelectedNivel(null);
+    setCurrentScreen('niveles');
+  }, []);
+
+  const handleQuizComplete = useCallback(() => {
+    setSelectedNivel(null);
+    setSelectedLesson(null);
+    setCurrentScreen('home');
+  }, []);
+
   return (
     <SafeAreaProvider>
       <StatusBar barStyle="dark-content" />
       {currentScreen === 'loading' && <LoadingScreen />}
+      {currentScreen === 'login' && (
+        <LoginScreen existingProfiles={profiles} onLoginSuccess={handleLoginSuccess} />
+      )}
       {currentScreen === 'perfil' && (
         <PerfilScreen
-          profileName={profileName}
-          profileColor={profileColor}
-          onEnter={handleEnterProfile}
+          profiles={profiles}
+          onSelectProfile={handleSelectProfile}
           onAddProfile={handleAddProfile}
           onSettings={handleSettings}
+          onProfilesChanged={handleProfilesChanged}
+          onAllProfilesRemoved={handleAllProfilesRemoved}
         />
       )}
-      {currentScreen === 'anadirPerfil' && (
-        <AnadirPerfilScreen onNext={handleNextFromAddProfile} />
+      {currentScreen === 'ajustes' && <AjustesScreen onBack={handleBackFromAjustes} />}
+      {currentScreen === 'home' && selectedProfile && (
+        <HomeScreen
+          profile={selectedProfile}
+          onBack={handleBackFromHome}
+          onSelectLesson={handleSelectLesson}
+        />
       )}
-      {currentScreen === 'asignacion' && (
-        <AsignacionScreen onNext={handleNextFromAsignacion} />
+      {currentScreen === 'niveles' && selectedLesson && selectedProfile && (
+        <NivelesScreen
+          leccion={selectedLesson}
+          profile={selectedProfile}
+          onBack={handleBackFromNiveles}
+          onSelectNivel={handleSelectNivel}
+        />
       )}
-      {currentScreen === 'ajustes' && (
-        <AjustesScreen onBack={handleBackFromAjustes} />
+      {currentScreen === 'quiz' && selectedNivel && selectedLesson && selectedProfile && (
+        <QuizScreen
+          nivel={selectedNivel}
+          leccionId={selectedLesson.id}
+          profile={selectedProfile}
+          onBack={handleBackFromQuiz}
+          onComplete={handleQuizComplete}
+        />
       )}
     </SafeAreaProvider>
   );

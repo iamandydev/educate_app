@@ -1,4 +1,5 @@
 import RNFS from 'react-native-fs';
+import type { ProfileData, PendingAnswer } from '../types';
 
 const USER_DATA_DIR = 'user_data';
 
@@ -6,27 +7,20 @@ function getUserDataPath(): string {
   return `${RNFS.DocumentDirectoryPath}/${USER_DATA_DIR}`;
 }
 
-function getAsignacionPath(): string {
-  return `${getUserDataPath()}/asignacion.json`;
+function getProfilesPath(): string {
+  return `${getUserDataPath()}/profiles.json`;
 }
 
-function getProfilePath(name: string): string {
-  return `${getUserDataPath()}/${name}`;
+function getPendingAnswersPath(): string {
+  return `${getUserDataPath()}/pending_answers.json`;
 }
 
-function getProfileJsonPath(name: string): string {
-  return `${getProfilePath(name)}/perfil.json`;
+function getProfileDir(codigo: string): string {
+  return `${getUserDataPath()}/${codigo}`;
 }
 
-export interface AsignacionData {
-  docente: string;
-  salon: string;
-  dispositivo: string;
-}
-
-export interface PerfilData {
-  nombre: string;
-  color: string;
+function getCachePath(codigo: string, filename: string): string {
+  return `${getProfileDir(codigo)}/${filename}`;
 }
 
 async function ensureDir(dirPath: string): Promise<void> {
@@ -36,16 +30,92 @@ async function ensureDir(dirPath: string): Promise<void> {
   }
 }
 
-export async function saveAsignacion(data: AsignacionData): Promise<void> {
+async function ensureUserDataDir(): Promise<void> {
   await ensureDir(getUserDataPath());
-  const json = JSON.stringify(data, null, 2);
-  await RNFS.writeFile(getAsignacionPath(), json, 'utf8');
 }
 
-export async function savePerfil(name: string, color: string): Promise<void> {
-  const profileDir = getProfilePath(name);
-  await ensureDir(profileDir);
-  const data: PerfilData = { nombre: name, color };
-  const json = JSON.stringify(data, null, 2);
-  await RNFS.writeFile(getProfileJsonPath(name), json, 'utf8');
+export async function saveProfiles(profiles: ProfileData[]): Promise<void> {
+  await ensureUserDataDir();
+  const json = JSON.stringify(profiles, null, 2);
+  await RNFS.writeFile(getProfilesPath(), json, 'utf8');
+}
+
+export async function loadProfiles(): Promise<ProfileData[]> {
+  try {
+    const exists = await RNFS.exists(getProfilesPath());
+    if (!exists) { return []; }
+    const raw = await RNFS.readFile(getProfilesPath(), 'utf8');
+    return JSON.parse(raw);
+  } catch {
+    return [];
+  }
+}
+
+export async function saveLecciones(codigo: string, lecciones: any[]): Promise<void> {
+  const dir = getProfileDir(codigo);
+  await ensureDir(dir);
+  const json = JSON.stringify(lecciones, null, 2);
+  await RNFS.writeFile(getCachePath(codigo, 'lecciones.json'), json, 'utf8');
+}
+
+export async function loadLecciones(codigo: string): Promise<any[]> {
+  try {
+    const path = getCachePath(codigo, 'lecciones.json');
+    const exists = await RNFS.exists(path);
+    if (!exists) { return []; }
+    const raw = await RNFS.readFile(path, 'utf8');
+    return JSON.parse(raw);
+  } catch {
+    return [];
+  }
+}
+
+export async function saveNiveles(leccionId: number, niveles: any[], codigo: string): Promise<void> {
+  const dir = getProfileDir(codigo);
+  await ensureDir(dir);
+  const json = JSON.stringify(niveles, null, 2);
+  await RNFS.writeFile(getCachePath(codigo, `niveles_${leccionId}.json`), json, 'utf8');
+}
+
+export async function loadNiveles(leccionId: number, codigo: string): Promise<any[]> {
+  try {
+    const path = getCachePath(codigo, `niveles_${leccionId}.json`);
+    const exists = await RNFS.exists(path);
+    if (!exists) { return []; }
+    const raw = await RNFS.readFile(path, 'utf8');
+    return JSON.parse(raw);
+  } catch {
+    return [];
+  }
+}
+
+export async function savePendingAnswers(answers: PendingAnswer[]): Promise<void> {
+  await ensureUserDataDir();
+  const json = JSON.stringify(answers, null, 2);
+  await RNFS.writeFile(getPendingAnswersPath(), json, 'utf8');
+}
+
+export async function loadPendingAnswers(): Promise<PendingAnswer[]> {
+  try {
+    const exists = await RNFS.exists(getPendingAnswersPath());
+    if (!exists) { return []; }
+    const raw = await RNFS.readFile(getPendingAnswersPath(), 'utf8');
+    return JSON.parse(raw);
+  } catch {
+    return [];
+  }
+}
+
+export async function deleteProfileData(codigo: string): Promise<void> {
+  const dir = getProfileDir(codigo);
+  const exists = await RNFS.exists(dir);
+  if (exists) {
+    await RNFS.unlink(dir);
+  }
+  const profiles = await loadProfiles();
+  const updated = profiles.filter((p) => p.codigo !== codigo);
+  await saveProfiles(updated);
+  const pending = await loadPendingAnswers();
+  const updatedPending = pending.filter((a) => a.codigo !== codigo);
+  await savePendingAnswers(updatedPending);
 }

@@ -1,98 +1,114 @@
-This is a new [**React Native**](https://reactnative.dev) project, bootstrapped using [`@react-native-community/cli`](https://github.com/react-native-community/cli).
+# Educate
 
-# Getting Started
+React Native educational app for students. Students log in with a school code and identification number, browse lessons by course, and complete level-based quizzes with a timer. Supports offline answer queuing with automatic sync when connectivity is restored.
 
-> **Note**: Make sure you have completed the [Set Up Your Environment](https://reactnative.dev/docs/set-up-your-environment) guide before proceeding.
+## Tech Stack
 
-## Step 1: Start Metro
+- **React Native 0.86.0** (New Architecture enabled)
+- **React 19.2.3**
+- **TypeScript**
+- **react-native-web** for browser support
+- **react-native-fs** for native file-based storage
+- **@react-native-community/netinfo** for connectivity detection
+- **State-based navigation** (no react-navigation)
 
-First, you will need to run **Metro**, the JavaScript build tool for React Native.
+## Project Structure
 
-To start the Metro dev server, run the following command from the root of your React Native project:
-
-```sh
-# Using npm
-npm start
-
-# OR using Yarn
-yarn start
+```
+Educate/
+├── App.tsx                          # Root component, screen routing via state
+├── src/
+│   ├── types/
+│   │   └── index.ts                 # Shared TypeScript interfaces
+│   ├── constants/
+│   │   ├── colors.ts                # App color palette
+│   │   └── profileColors.ts         # Profile bubble colors + getRandomColor()
+│   ├── components/
+│   │   ├── Boton.tsx                # Reusable button (solid/outline variants)
+│   │   └── ScreenHeader.tsx         # Header with back arrow + optional right element
+│   ├── screens/
+│   │   ├── LoadingScreen.tsx        # Splash screen (2s timeout)
+│   │   ├── LoginScreen.tsx          # 2-step login: code → identification number
+│   │   ├── PerfilScreen.tsx         # Profile carousel, three-dot menu, logout
+│   │   ├── HomeScreen.tsx           # Lesson grid (FlatList numColumns=2)
+│   │   ├── NivelesScreen.tsx        # Levels list (inverted sort, bottom-to-top)
+│   │   ├── QuizScreen.tsx           # Question + options + timer + submit
+│   │   └── AjustesScreen.tsx        # App settings / info
+│   ├── services/
+│   │   ├── api.ts                   # REST API client (all endpoints)
+│   │   ├── connectivity.ts          # NetInfo-based connectivity (native)
+│   │   ├── connectivity.web.ts      # navigator.onLine-based connectivity (web)
+│   │   └── syncQueue.ts            # Offline answer queue + sync on reconnect
+│   └── storage/
+│       ├── storageService.ts        # Native file storage (react-native-fs)
+│       └── storageService.web.ts    # Web localStorage storage
+├── android/                         # Android native project
+│   ├── app/src/main/
+│   │   ├── AndroidManifest.xml      # INTERNET + network state permissions
+│   │   └── java/com/educate/        # Native Android code
+│   └── gradle.properties            # usesCleartextTraffic, newArchEnabled
+└── package.json
 ```
 
-## Step 2: Build and run your app
+## API Endpoints
 
-With Metro running, open a new terminal window/pane from the root of your React Native project, and use one of the following commands to build and run your Android or iOS app:
+Base URL: `http://192.168.20.79/educate_api`
 
-### Android
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/auth/alumno/login` | Student login (body: `{codigo, numero_identificacion}`) |
+| GET | `/alumnos/{codigo}` | Get student data + enrolled courses |
+| GET | `/cursos/{id}/lecciones` | List lessons for a course |
+| GET | `/lecciones/{id}/niveles` | List levels for a lesson |
+| GET | `/lecciones/{id}/niveles/{id}` | Get level detail + question |
+| POST | `/niveles/{id}/responder` | Submit answer (body: `{codigo_alumno, respuesta, tiempo_segundos}`) |
+| GET | `/alumnos/{codigo}/progreso` | Student progress (available, not yet integrated) |
 
-```sh
-# Using npm
-npm run android
+## Key Features
 
-# OR using Yarn
-yarn android
+### Multi-Profile Support
+- Multiple student profiles stored in `profiles.json`
+- Per-profile caching of lessons and levels
+- Duplicate code prevention on login
+- Profile deletion via three-dot menu (data removed locally)
+
+### Offline Sync
+- Answers queued in `pending_answers.json` when offline
+- Automatic sync when connectivity is restored
+- Listens for network state changes in real-time
+
+### Quiz System
+- Multiple-choice questions (A/B/C/D)
+- Timer tracks response time from screen load
+- Online: answer validated via API, result shown immediately
+- Offline: answer saved locally, synced later
+
+### Storage Architecture
+- **Native**: File-based (`react-native-fs`) in `DocumentDirectoryPath/user_data/`
+- **Web**: `localStorage` with keys prefixed by `user_data/`
+- Platform-specific implementations via `.ts` / `.web.ts` extensions
+
+## Building
+
+### Android APK
+
+```bash
+cd android
+./gradlew.bat assembleRelease
 ```
 
-### iOS
+Output: `android/app/build/outputs/apk/release/app-release.apk`
 
-For iOS, remember to install CocoaPods dependencies (this only needs to be run on first clone or after updating native deps).
+### Web
 
-The first time you create a new project, run the Ruby bundler to install CocoaPods itself:
-
-```sh
-bundle install
+```bash
+npm run web
 ```
 
-Then, and every time you update your native dependencies, run:
+## Configuration
 
-```sh
-bundle exec pod install
-```
+The API base URL is set in `src/services/api.ts`. Change `API_BASE_URL` to match your server.
 
-For more information, please visit [CocoaPods Getting Started guide](https://guides.cocoapods.org/using/getting-started.html).
-
-```sh
-# Using npm
-npm run ios
-
-# OR using Yarn
-yarn ios
-```
-
-If everything is set up correctly, you should see your new app running in the Android Emulator, iOS Simulator, or your connected device.
-
-This is one way to run your app — you can also build it directly from Android Studio or Xcode.
-
-## Step 3: Modify your app
-
-Now that you have successfully run the app, let's make changes!
-
-Open `App.tsx` in your text editor of choice and make some changes. When you save, your app will automatically update and reflect these changes — this is powered by [Fast Refresh](https://reactnative.dev/docs/fast-refresh).
-
-When you want to forcefully reload, for example to reset the state of your app, you can perform a full reload:
-
-- **Android**: Press the <kbd>R</kbd> key twice or select **"Reload"** from the **Dev Menu**, accessed via <kbd>Ctrl</kbd> + <kbd>M</kbd> (Windows/Linux) or <kbd>Cmd ⌘</kbd> + <kbd>M</kbd> (macOS).
-- **iOS**: Press <kbd>R</kbd> in iOS Simulator.
-
-## Congratulations! :tada:
-
-You've successfully run and modified your React Native App. :partying_face:
-
-### Now what?
-
-- If you want to add this new React Native code to an existing application, check out the [Integration guide](https://reactnative.dev/docs/integration-with-existing-apps).
-- If you're curious to learn more about React Native, check out the [docs](https://reactnative.dev/docs/getting-started).
-
-# Troubleshooting
-
-If you're having issues getting the above steps to work, see the [Troubleshooting](https://reactnative.dev/docs/troubleshooting) page.
-
-# Learn More
-
-To learn more about React Native, take a look at the following resources:
-
-- [React Native Website](https://reactnative.dev) - learn more about React Native.
-- [Getting Started](https://reactnative.dev/docs/environment-setup) - an **overview** of React Native and how setup your environment.
-- [Learn the Basics](https://reactnative.dev/docs/getting-started) - a **guided tour** of the React Native **basics**.
-- [Blog](https://reactnative.dev/blog) - read the latest official React Native **Blog** posts.
-- [`@facebook/react-native`](https://github.com/facebook/react-native) - the Open Source; GitHub **repository** for React Native.
-# educate_app
+`android/gradle.properties` contains:
+- `usesCleartextTraffic=true` (required for HTTP API calls)
+- `newArchEnabled=true` (React Native New Architecture)
