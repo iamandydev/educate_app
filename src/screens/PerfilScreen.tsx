@@ -1,9 +1,8 @@
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
   TouchableOpacity,
-  Image,
   StyleSheet,
   FlatList,
   Modal,
@@ -13,6 +12,7 @@ import { COLORS } from '../constants/colors';
 import ScreenHeader from '../components/ScreenHeader';
 import { deleteProfileData } from '../storage/storageService';
 import type { ProfileData } from '../types';
+import { getInitials } from '../utils/getInitials';
 
 interface PerfilScreenProps {
   profiles: ProfileData[];
@@ -21,13 +21,6 @@ interface PerfilScreenProps {
   onSettings: () => void;
   onProfilesChanged: (profiles: ProfileData[]) => void;
   onAllProfilesRemoved: () => void;
-}
-
-function getInitials(name: string): string {
-  const parts = name.trim().split(/\s+/);
-  if (parts.length === 0) { return ''; }
-  if (parts.length === 1) { return parts[0].charAt(0).toUpperCase(); }
-  return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
 }
 
 const PerfilScreen: React.FC<PerfilScreenProps> = ({
@@ -40,7 +33,6 @@ const PerfilScreen: React.FC<PerfilScreenProps> = ({
 }) => {
   const [menuVisible, setMenuVisible] = useState(false);
   const [logoutModalVisible, setLogoutModalVisible] = useState(false);
-  const menuRef = useRef<View>(null);
 
   const handleLogoutPress = () => {
     setMenuVisible(false);
@@ -59,7 +51,11 @@ const PerfilScreen: React.FC<PerfilScreenProps> = ({
           text: 'Eliminar',
           style: 'destructive',
           onPress: async () => {
-            await deleteProfileData(profile.codigo);
+            try {
+              await deleteProfileData(profile.codigo);
+            } catch {
+              // Storage error, proceed with UI update anyway
+            }
             const updated = profiles.filter((p) => p.codigo !== profile.codigo);
             if (updated.length === 0) {
               onAllProfilesRemoved();
@@ -79,7 +75,6 @@ const PerfilScreen: React.FC<PerfilScreenProps> = ({
 
   const threeDots = (
     <TouchableOpacity
-      ref={menuRef}
       style={styles.menuButton}
       onPress={() => setMenuVisible(!menuVisible)}
       activeOpacity={0.7}
@@ -88,10 +83,12 @@ const PerfilScreen: React.FC<PerfilScreenProps> = ({
     </TouchableOpacity>
   );
 
+  const isGrid = profiles.length >= 3;
+
   const renderItem = ({ item }: { item: ProfileData | 'add' }) => {
     if (item === 'add') {
       return (
-        <TouchableOpacity style={styles.itemContainer} activeOpacity={0.8} onPress={onAddProfile}>
+        <TouchableOpacity style={[styles.itemContainer, isGrid && styles.gridItem]} activeOpacity={0.8} onPress={onAddProfile}>
           <View style={[styles.bubble, styles.addBubble]}>
             <Text style={styles.addIcon}>+</Text>
           </View>
@@ -100,7 +97,7 @@ const PerfilScreen: React.FC<PerfilScreenProps> = ({
       );
     }
     return (
-      <TouchableOpacity style={styles.itemContainer} activeOpacity={0.8} onPress={() => onSelectProfile(item)}>
+      <TouchableOpacity style={[styles.itemContainer, isGrid && styles.gridItem]} activeOpacity={0.8} onPress={() => onSelectProfile(item)}>
         <View style={[styles.bubble, { backgroundColor: item.color }]}>
           <Text style={styles.initials}>{getInitials(item.nombre_completo)}</Text>
         </View>
@@ -134,9 +131,11 @@ const PerfilScreen: React.FC<PerfilScreenProps> = ({
         data={data}
         renderItem={renderItem}
         keyExtractor={(item) => (item === 'add' ? 'add' : item.codigo)}
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.listContent}
+        horizontal={!isGrid}
+        numColumns={isGrid ? 2 : undefined}
+        showsHorizontalScrollIndicator={!isGrid}
+        columnWrapperStyle={isGrid ? styles.gridRow : undefined}
+        contentContainerStyle={[styles.listContent, isGrid && styles.gridContent]}
         style={styles.list}
       />
 
@@ -177,12 +176,15 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.white },
   list: { flex: 1 },
   listContent: { paddingHorizontal: 24, alignItems: 'center', paddingVertical: 20 },
+  gridContent: { paddingHorizontal: 16 },
+  gridRow: { justifyContent: 'space-around' },
+  gridItem: { width: '50%', marginBottom: 8 },
   itemContainer: { alignItems: 'center', marginHorizontal: 12 },
-  bubble: { width: 130, height: 130, borderRadius: 65, justifyContent: 'center', alignItems: 'center', marginBottom: 8 },
+  bubble: { width: 110, height: 110, borderRadius: 55, justifyContent: 'center', alignItems: 'center', marginBottom: 8 },
   addBubble: { borderWidth: 3, borderColor: COLORS.mediumGreen, borderStyle: 'dashed', backgroundColor: COLORS.white },
-  addIcon: { fontSize: 50, fontWeight: '300', color: COLORS.mediumGreen },
-  initials: { fontSize: 44, fontWeight: '700', color: COLORS.white },
-  profileName: { fontSize: 16, fontWeight: '600', color: COLORS.darkGray, maxWidth: 130 },
+  addIcon: { fontSize: 42, fontWeight: '300', color: COLORS.mediumGreen },
+  initials: { fontSize: 38, fontWeight: '700', color: COLORS.white },
+  profileName: { fontSize: 16, fontWeight: '600', color: COLORS.darkGray, maxWidth: 110 },
   addLabel: { fontSize: 16, fontWeight: '600', color: COLORS.mediumGreen },
   hintText: { fontSize: 14, color: COLORS.gray, textAlign: 'center', marginBottom: 20 },
   menuButton: { width: 36, height: 36, borderRadius: 18, backgroundColor: COLORS.lightGray, justifyContent: 'center', alignItems: 'center' },

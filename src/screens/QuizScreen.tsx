@@ -82,6 +82,12 @@ const QuizScreen: React.FC<QuizScreenProps> = ({ nivel, leccionId, profile, onBa
           );
           return;
         }
+        Alert.alert(
+          'Error del servidor',
+          response.message || 'No se pudo registrar tu respuesta.',
+          [{ text: 'OK', onPress: onComplete }],
+        );
+        return;
       }
 
       await addPendingAnswer(nivel.id, profile.codigo, respuesta, tiempoSegundos);
@@ -91,12 +97,20 @@ const QuizScreen: React.FC<QuizScreenProps> = ({ nivel, leccionId, profile, onBa
         [{ text: 'OK', onPress: onComplete }],
       );
     } catch {
-      await addPendingAnswer(nivel.id, profile.codigo, respuesta, tiempoSegundos);
-      Alert.alert(
-        'Respuesta guardada',
-        `Tu respuesta sera enviada cuando haya conexion. Tiempo: ${tiempoSegundos}s`,
-        [{ text: 'OK', onPress: onComplete }],
-      );
+      try {
+        await addPendingAnswer(nivel.id, profile.codigo, respuesta, tiempoSegundos);
+        Alert.alert(
+          'Respuesta guardada',
+          `Tu respuesta sera enviada cuando haya conexion. Tiempo: ${tiempoSegundos}s`,
+          [{ text: 'OK', onPress: onComplete }],
+        );
+      } catch {
+        Alert.alert(
+          'Error',
+          'No se pudo guardar tu respuesta.',
+          [{ text: 'OK', onPress: onComplete }],
+        );
+      }
     } finally {
       setSubmitting(false);
     }

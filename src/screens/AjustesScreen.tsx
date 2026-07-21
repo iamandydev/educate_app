@@ -18,7 +18,7 @@ const AjustesScreen: React.FC<AjustesScreenProps> = ({ onBack }) => {
         </View>
         <View style={styles.card}>
           <Text style={styles.label}>Version</Text>
-          <Text style={styles.value}>1.0.0</Text>
+          <Text style={styles.value}>0.0.1</Text>
         </View>
       </View>
     </View>

@@ -1,5 +1,5 @@
 import RNFS from 'react-native-fs';
-import type { ProfileData, PendingAnswer } from '../types';
+import type { ProfileData, PendingAnswer, Leccion, Nivel } from '../types';
 
 const USER_DATA_DIR = 'user_data';
 
@@ -51,14 +51,14 @@ export async function loadProfiles(): Promise<ProfileData[]> {
   }
 }
 
-export async function saveLecciones(codigo: string, lecciones: any[]): Promise<void> {
+export async function saveLecciones(codigo: string, lecciones: Leccion[]): Promise<void> {
   const dir = getProfileDir(codigo);
   await ensureDir(dir);
   const json = JSON.stringify(lecciones, null, 2);
   await RNFS.writeFile(getCachePath(codigo, 'lecciones.json'), json, 'utf8');
 }
 
-export async function loadLecciones(codigo: string): Promise<any[]> {
+export async function loadLecciones(codigo: string): Promise<Leccion[]> {
   try {
     const path = getCachePath(codigo, 'lecciones.json');
     const exists = await RNFS.exists(path);
@@ -70,14 +70,14 @@ export async function loadLecciones(codigo: string): Promise<any[]> {
   }
 }
 
-export async function saveNiveles(leccionId: number, niveles: any[], codigo: string): Promise<void> {
+export async function saveNiveles(leccionId: number, niveles: Nivel[], codigo: string): Promise<void> {
   const dir = getProfileDir(codigo);
   await ensureDir(dir);
   const json = JSON.stringify(niveles, null, 2);
   await RNFS.writeFile(getCachePath(codigo, `niveles_${leccionId}.json`), json, 'utf8');
 }
 
-export async function loadNiveles(leccionId: number, codigo: string): Promise<any[]> {
+export async function loadNiveles(leccionId: number, codigo: string): Promise<Nivel[]> {
   try {
     const path = getCachePath(codigo, `niveles_${leccionId}.json`);
     const exists = await RNFS.exists(path);

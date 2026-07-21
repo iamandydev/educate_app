@@ -42,7 +42,7 @@ function App() {
     return unsubscribe;
   }, []);
 
-  const handleLoginSuccess = useCallback((profile: ProfileData) => {
+  const handleLoginSuccess = useCallback(async (profile: ProfileData) => {
     setProfiles((prev) => {
       if (prev.some((p) => p.codigo === profile.codigo)) { return prev; }
       const updated = [...prev, profile];

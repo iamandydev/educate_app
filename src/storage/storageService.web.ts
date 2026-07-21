@@ -1,4 +1,4 @@
-import type { ProfileData, PendingAnswer } from '../types';
+import type { ProfileData, PendingAnswer, Leccion, Nivel } from '../types';
 
 declare const localStorage: {
   getItem(key: string): string | null;
@@ -25,12 +25,12 @@ export async function loadProfiles(): Promise<ProfileData[]> {
   }
 }
 
-export async function saveLecciones(codigo: string, lecciones: any[]): Promise<void> {
+export async function saveLecciones(codigo: string, lecciones: Leccion[]): Promise<void> {
   const json = JSON.stringify(lecciones, null, 2);
   localStorage.setItem(`${USER_DATA_PREFIX}/${codigo}/lecciones.json`, json);
 }
 
-export async function loadLecciones(codigo: string): Promise<any[]> {
+export async function loadLecciones(codigo: string): Promise<Leccion[]> {
   try {
     const raw = localStorage.getItem(`${USER_DATA_PREFIX}/${codigo}/lecciones.json`);
     if (!raw) { return []; }
@@ -40,7 +40,7 @@ export async function loadLecciones(codigo: string): Promise<any[]> {
   }
 }
 
-export async function saveNiveles(leccionId: number, niveles: any[], codigo: string): Promise<void> {
+export async function saveNiveles(leccionId: number, niveles: Nivel[], codigo: string): Promise<void> {
   const json = JSON.stringify(niveles, null, 2);
   localStorage.setItem(`${USER_DATA_PREFIX}/${codigo}/niveles_${leccionId}.json`, json);
 }

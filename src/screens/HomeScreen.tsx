@@ -13,18 +13,12 @@ import { saveLecciones, loadLecciones } from '../storage/storageService';
 import { getLecciones } from '../services/api';
 import { isConnected } from '../services/connectivity';
 import type { ProfileData, Leccion } from '../types';
+import { getInitials } from '../utils/getInitials';
 
 interface HomeScreenProps {
   profile: ProfileData;
   onBack: () => void;
   onSelectLesson: (leccion: Leccion) => void;
-}
-
-function getInitials(name: string): string {
-  const parts = name.trim().split(/\s+/);
-  if (parts.length === 0) { return ''; }
-  if (parts.length === 1) { return parts[0].charAt(0).toUpperCase(); }
-  return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
 }
 
 const HomeScreen: React.FC<HomeScreenProps> = ({ profile, onBack, onSelectLesson }) => {

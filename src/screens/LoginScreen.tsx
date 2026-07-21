@@ -40,6 +40,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ existingProfiles, onLoginSucc
   };
 
   const handleLogin = async () => {
+    if (loading) { return; }
     if (identificacion.trim().length === 0) {
       setError('Ingresa tu número de identificación');
       return;
@@ -57,11 +58,18 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ existingProfiles, onLoginSucc
         return;
       }
 
-      const studentData = await getStudentByCodigo(codigo.trim());
+      let nombre = loginResponse.data.nombre_completo;
+      let curso = loginResponse.data.curso;
+      let cursoId = 0;
 
-      const nombre = studentData.data?.alumno?.nombre_completo || loginResponse.data.nombre_completo;
-      const curso = studentData.data?.alumno?.curso || loginResponse.data.curso;
-      const cursoId = studentData.data?.cursos?.[0]?.id || 0;
+      try {
+        const studentData = await getStudentByCodigo(codigo.trim());
+        nombre = studentData.data?.alumno?.nombre_completo || nombre;
+        curso = studentData.data?.alumno?.curso || curso;
+        cursoId = studentData.data?.cursos?.[0]?.id || 0;
+      } catch {
+        // Use data from login response as fallback
+      }
 
       const color = getRandomColor();
 

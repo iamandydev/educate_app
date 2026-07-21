@@ -1,8 +1,14 @@
 import type { Leccion, Nivel, NivelDetalle } from '../types';
 
-const API_BASE_URL = __DEV__
-  ? 'http://localhost/educate_api'
-  : 'https://api-educate.byethost31.com';
+const API_BASE_URL = 'http://192.168.20.79/educate_api';
+
+async function requestJson<T>(url: string, init?: RequestInit): Promise<T> {
+  const response = await fetch(url, init);
+  if (!response.ok) {
+    throw new Error(`HTTP ${response.status}`);
+  }
+  return response.json();
+}
 
 export interface LoginResponse {
   status: string;
@@ -67,7 +73,7 @@ export async function loginStudent(
   codigo: string,
   identificacion: string,
 ): Promise<LoginResponse> {
-  const response = await fetch(`${API_BASE_URL}/auth/alumno/login`, {
+  return requestJson(`${API_BASE_URL}/auth/alumno/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -75,34 +81,29 @@ export async function loginStudent(
       numero_identificacion: identificacion,
     }),
   });
-  return response.json();
 }
 
 export async function getStudentByCodigo(
   codigo: string,
 ): Promise<StudentDataResponse> {
-  const response = await fetch(`${API_BASE_URL}/alumnos/${codigo}`);
-  return response.json();
+  return requestJson(`${API_BASE_URL}/alumnos/${codigo}`);
 }
 
 export async function getLecciones(cursoId: number): Promise<LeccionesResponse> {
-  const response = await fetch(`${API_BASE_URL}/cursos/${cursoId}/lecciones`);
-  return response.json();
+  return requestJson(`${API_BASE_URL}/cursos/${cursoId}/lecciones`);
 }
 
 export async function getNiveles(leccionId: number): Promise<NivelesResponse> {
-  const response = await fetch(`${API_BASE_URL}/lecciones/${leccionId}/niveles`);
-  return response.json();
+  return requestJson(`${API_BASE_URL}/lecciones/${leccionId}/niveles`);
 }
 
 export async function getNivelDetalle(
   leccionId: number,
   nivelId: number,
 ): Promise<NivelDetalleResponse> {
-  const response = await fetch(
+  return requestJson(
     `${API_BASE_URL}/lecciones/${leccionId}/niveles/${nivelId}`,
   );
-  return response.json();
 }
 
 export async function responderNivel(
@@ -111,7 +112,7 @@ export async function responderNivel(
   respuesta: string,
   tiempoSegundos: number,
 ): Promise<ResponderResponse> {
-  const response = await fetch(`${API_BASE_URL}/niveles/${nivelId}/responder`, {
+  return requestJson(`${API_BASE_URL}/niveles/${nivelId}/responder`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -120,5 +121,4 @@ export async function responderNivel(
       tiempo_segundos: tiempoSegundos,
     }),
   });
-  return response.json();
 }

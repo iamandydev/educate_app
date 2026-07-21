@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -53,7 +53,7 @@ const NivelesScreen: React.FC<NivelesScreenProps> = ({ leccion, profile, onBack,
     fetchNiveles();
   }, [leccion.id, profile.codigo]);
 
-  const reversedNiveles = [...niveles].sort((a, b) => b.orden - a.orden || b.id - a.id);
+  const reversedNiveles = useMemo(() => [...niveles].sort((a, b) => b.orden - a.orden || b.id - a.id), [niveles]);
 
   const renderNivel = ({ item, index }: { item: Nivel; index: number }) => {
     const displayNumber = reversedNiveles.length - index;

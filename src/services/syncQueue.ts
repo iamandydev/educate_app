@@ -3,6 +3,8 @@ import { isConnected } from './connectivity';
 import { responderNivel } from './api';
 import type { PendingAnswer } from '../types';
 
+let syncInProgress = false;
+
 export async function addPendingAnswer(
   nivelId: number,
   codigo: string,
@@ -23,24 +25,32 @@ export async function addPendingAnswer(
 }
 
 export async function syncPendingAnswers(): Promise<void> {
-  const online = await isConnected();
-  if (!online) { return; }
+  if (syncInProgress) { return; }
+  syncInProgress = true;
 
-  const answers = await loadPendingAnswers();
-  if (answers.length === 0) { return; }
+  try {
+    const online = await isConnected();
+    if (!online) { return; }
 
-  const remaining: PendingAnswer[] = [];
-  for (const answer of answers) {
-    try {
-      await responderNivel(
-        answer.nivelId,
-        answer.codigo,
-        answer.respuesta,
-        answer.tiempoSegundos,
-      );
-    } catch {
-      remaining.push(answer);
+    const answers = await loadPendingAnswers();
+    if (answers.length === 0) { return; }
+
+    const remaining: PendingAnswer[] = [];
+    for (const answer of answers) {
+      try {
+        await responderNivel(
+          answer.nivelId,
+          answer.codigo,
+          answer.respuesta,
+          answer.tiempoSegundos,
+        );
+      } catch {
+        remaining.push(answer);
+        break;
+      }
     }
+    await savePendingAnswers(remaining);
+  } finally {
+    syncInProgress = false;
   }
-  await savePendingAnswers(remaining);
 }
